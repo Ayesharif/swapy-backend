@@ -164,6 +164,7 @@ pass: process.env.password,
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
           <h2 style="color: #333;">OTP Verification</h2>
           <p>Hello ${user.firstName},</p>
+            <a href="http://localhost:5173/resetpassword?email=${email}&&otp=${otp}">reset your password</a>
           <p>Your OTP for verification is: 
             <strong style="font-size: 24px; color: #ff6b6b;">${otp}</strong>
           </p>
@@ -194,6 +195,95 @@ pass: process.env.password,
 
     }
 
+
 export const verifyOtp=async(req, res)=>{
-  
+
+      const emailFormat = /^[a-zA-Z0-9_.+]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+      const otpFormat= /^\d{6}$/;
+
+    let email = req.body.email?.toLowerCase();
+    let otp = req.body.otp;
+console.log(otp);
+
+if(!email.match(emailFormat) && !otp.match(otpFormat)){
+ return res.send({
+        status : 0,
+        message : "otp is Invalid"
+      })
+}
+
+ const verify= await Users.findOne({email:email, otp:otp});
+if(!verify){
+res.status(404).json({
+      status: 0,
+      message: "User not found",
+    });
+}
+if(verify.otp !== otp){
+res.status(404).json({
+      status: 0,
+      message: "Please enter correct otp",
+    });
+}
+
+console.log( verify.expiresAt, Date.now());
+
+if (verify.expiresAt < Date.now()) {
+            return res.status(400).json({
+                status: 0,
+                message: "OTP has expired. Please request a new OTP."
+            });
+        }
+
+res.status(200).send({        
+   status: 1,
+ message: "Verification successful"
+})
+}
+
+
+export const resetPassword= async (req, res)=>{
+        const emailFormat = /^[a-zA-Z0-9_.+]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+      const otpFormat= /^\d{6}$/;         
+  const passwordValidation = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$/;
+            const {email, otp, password}= req.body;
+
+if(!email.match(emailFormat) && !password.match(passwordValidation) && !otp.match(otpFormat)){
+  return res.status(404).send({
+        status : 0,
+        message : "Please Enter Strong Password"
+      })
+    }
+
+    if(!email || !password || !otp){
+      return res.status(404).send({
+        status : 0,
+        message : "Please Enter Password"
+      })
+    }
+
+     const verify= await Users.findOne({email:email, otp:otp});
+if(!verify){
+res.status(404).json({
+      status: 0,
+      message: "User not found",
+    });
+}
+const hashedPassword = await bcrypt.hashSync(password)
+if (verify.expiresAt < Date.now()) {
+            return res.status(400).json({
+                status: 0,
+                message: "Link has expired. Please request again."
+            });
+        }
+await Users.updateOne(
+      { email: email, otp:otp },
+      { $set: { password:hashedPassword } }
+    );
+
+res.status(200).send({        
+   status: 1,
+ message: "Password updated successful"
+})
+
 }
