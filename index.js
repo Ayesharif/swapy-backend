@@ -7,8 +7,8 @@ import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import jwt from 'jsonwebtoken'
 dotenv.config()
-import otpGenerator from "otp-generator";
-
+import cors from 'cors'
+ 
 try {
     await client.connect();
     console.log("✅ Connected to MongoDB");
@@ -22,7 +22,7 @@ try {
   const expiresAt = Date.now() + 5 * 60 * 1000;
   console.log(expiresAt);
   
-  
+  app.use(cors());
   app.use(express.json());
   app.use(cookieParser());
   
