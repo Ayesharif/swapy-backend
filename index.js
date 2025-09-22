@@ -1,13 +1,17 @@
 import AuthRoutes from './routers/user/authRouter.js'
 import productRoutes from './routers/user/productRouter.js'
 import userRoutes from './routers/user/userRouter.js'
+import AdminRoutes from './routers/admin/adminRouter.js'
 import express from 'express'
 import {client} from './dbConfig.js'
 import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import jwt from 'jsonwebtoken'
-dotenv.config()
 import cors from 'cors'
+import { verifyToken } from './middleware/verifyToken.js'
+
+dotenv.config()
+
  
 try {
     await client.connect();
@@ -22,46 +26,25 @@ try {
   const expiresAt = Date.now() + 5 * 60 * 1000;
   console.log(expiresAt);
   
-  app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // your frontend URL
+  credentials: true,
+}));
   app.use(express.json());
   app.use(cookieParser());
   
   app.use(AuthRoutes);
   app.use(productRoutes);
-console.log(process.env.SECRET);
-
-app.use((req, res, next)=>{
-  try{
-    const token = req.cookies.token;
-    
-    console.log("token .......",token);
-    if(!token){
-      return res.status(404).send({
-      status: 0,
-      error: error,
-      message: "Token not found"
-    })
-    
-  }
-  const decode= jwt.verify(token, process.env.SECRET)
-  console.log(decode);
+  console.log(process.env.SECRET);
   
-    next()
-    
-  }
-  catch(error){
-    return res.send({
-      status: 0,
-      error: error,
-      message: "Invalid Token"
-    })
-  }
-})
-
-app.use(userRoutes);
-
-
-
-app.listen(port, () => {
+  app.use(verifyToken)
+  
+  app.use(userRoutes);
+  app.use(AdminRoutes);
+  
+  
+  
+  app.listen(port, () => {
     console.log("Server running at http://localhost:3000");
-});
+  });
+  

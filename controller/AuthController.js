@@ -12,8 +12,13 @@ import otpGenerator from "otp-generator";
 
 export const register =async (req, res)=>{
         if(!req.body.firstName || !req.body.lastName || !req.body.phone || !req.body.password || !req.body.email){
-            res.send("please fill out complete form");
-        }
+            
+              return res.status(400).send({
+                  message:"please fill out complete form",
+                status: 0
+                })
+        
+          }
         else{
             const userEmail=req.body.email.toLowerCase();
     
@@ -26,7 +31,10 @@ export const register =async (req, res)=>{
         const checkUser = await Users.findOne({email: userEmail})
     
         if(checkUser){
-            return res.send("Email already exist");
+                            return res.status(409).send({
+                  message:"Email already exist",
+                status: 0
+                })
         }
         else{
     
@@ -36,23 +44,34 @@ export const register =async (req, res)=>{
                 lastName: req.body.lastName,
                 email: req.body.email,
                 phone: req.body.phone,
+                city: req.body.city,
                 password: hashedPassword,
                 status:"active",
-                isVerified: false
+                isVerified: false,
+                role:"user"
             }
             
             
             const response=  await Users.insertOne(user);
             if(response){
-                return res.send("user added successfully")
+                return res.status(201).send({
+                  message:"User registeration successfully",
+                status: 1
+                })
             }
             else{
-                return res.send("something went wrong")
+                return res.status(500).send({
+                  message:"Something went wrong",
+                status: 0
+                })
             }
         }
             }else{
-                return res.send("invalid email or password")
-            }
+                return res.status(400).send({
+                  message:"invalid email or password",
+                status: 0
+                })
+              }
         }
     
 }
@@ -91,7 +110,7 @@ export const login = async (req, res)=>{
         _id: user._id,
         email,
         firstName:user.firstName,
-    }, process.env.SECRET, {expiresIn: "1h"})
+    }, process.env.SECRET, {expiresIn: "24h"})
      res.cookie("token", token,{
       httpOnly:true,
       secure: true
@@ -99,8 +118,14 @@ export const login = async (req, res)=>{
 return res.send({
     status : 1,
       message : "Login Successful",
-      token,
-      data : user
+      data : {
+        id:user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        city:user.city,
+        role: user.role
+      }
 })
 
     }
