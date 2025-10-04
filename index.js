@@ -27,11 +27,16 @@ try {
   const expiresAt = Date.now() + 5 * 60 * 1000;
   console.log(expiresAt);
   
-  app.use(cors({
-    origin: "https://swapy-three.vercel.app", // your frontend URL
-    credentials: true,
-    
-  }));
+  app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",          // for local development
+      "https://swapy-three.vercel.app", // for deployed frontend
+    ],
+    credentials: true, // allow cookies, authorization headers
+  })
+);
+
   app.use(express.json());
   app.use(cookieParser());
 
