@@ -5,13 +5,16 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 
-import { login, nodeMailer, register, resetPassword, verifyOtp } from '../../controller/AuthController.js';
+import { authMe, login, logOut, nodeMailer, register, resetPassword, verifyOtp } from '../../controller/AuthController.js';
+import { verifyToken } from '../../middleware/verifyToken.js';
 
 const router = express.Router();
 
 router.post('/register', register);
 
 router.post('/login', login)
+router.get('/authMe', authMe)
+router.post('/logout', logOut)
 
 
 router.post('/forgotpassword', nodeMailer)

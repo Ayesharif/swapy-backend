@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser'
 import jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { verifyToken } from './middleware/verifyToken.js'
+import path from 'path'
 
 dotenv.config()
 
@@ -26,13 +27,17 @@ try {
   const expiresAt = Date.now() + 5 * 60 * 1000;
   console.log(expiresAt);
   
-app.use(cors({
-  origin: "http://localhost:5173", // your frontend URL
-  credentials: true,
-}));
+  app.use(cors({
+    origin: "http://localhost:5173", // your frontend URL
+    credentials: true,
+    
+  }));
   app.use(express.json());
   app.use(cookieParser());
-  
+  app.use('/', (req, res)=>{
+    return res.send( "✅ Api is working")
+  })
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")))
   app.use(AuthRoutes);
   app.use(productRoutes);
   console.log(process.env.SECRET);

@@ -4,12 +4,88 @@ import { ObjectId } from 'mongodb';
 
 const myDB = client.db("olxClone");
 const Products = myDB.collection("products");
+const Users = myDB.collection("users");
 const Favourites = myDB.collection("favourites");
 
 
-export const addProduct= async (req, res)=>{
 
+export const getUserProfile= async(req, res)=>{
+  
   try{
+    
+    const    userId =new ObjectId(req.user._id)
+   
+const user = await Users.findOne({ _id: userId , email:req.user.email},{projection:{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1, role:1 }});
+
+if(!user){
+  return res.status(404).send({
+    message: "user not found",
+    status: 0
+  })
+}
+// console.log("user",user);
+
+return res.status(200).send({
+data: user,
+  message: "user found successfully",
+  status: 1
+})
+
+  }catch(error){
+
+   return res.status(500).send({
+    message: error.message,
+    status: 0
+  }) 
+  }
+
+}
+export const updateUserProfile= async(req, res)=>{
+  
+  try{
+    
+    const    userId =new ObjectId(req.user._id)
+
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      updateData.image = `/uploads/${req.file.filename}`;
+    }
+
+    console.log("user...",updateData);
+    
+const userUpdate = await Users.updateOne({ _id: userId , email:req.user.email}, {$set:updateData});
+
+
+
+    if (userUpdate.modifiedCount > 0) {
+
+      const user = await Users.findOne({ _id: userId , email:req.user.email},{projection:{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1 }});
+      return res.status(200).send({
+        status: 1,
+        message: "Profile updated successfully",
+        data:user
+      });
+    } else {
+      return res.status(200).send({
+        status: 1,
+        message: "No changes made to profile",
+      });
+    }
+  }catch(error){
+
+   return res.status(500).send({
+    message: error.message,
+    status: 0
+  }) 
+  }
+
+}
+
+export const addProduct = async (req, res) => {
+  try {
+    // map uploaded files to paths
+    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
 
     const product = {
       title: req.body.title,
@@ -21,30 +97,33 @@ export const addProduct= async (req, res)=>{
       deletedAt: null,
       isDeleted: false,
       productType: req.body.productType,
+      images: imagePaths,   // ✅ store image paths
       createdAt: Date.now(),
       updatedAt: Date.now(),
-    }
+    };
+
     const response = await Products.insertOne(product);
+
     if (!response) {
       return res.status(404).send({
-            status:0,
-            message:"product not found"
-          })
-        }
-        return res.status(200).send({
-              status:1,
-              message:"product added successfully"
-            })
+        status: 0,
+        message: "product not found",
+      });
+    }
 
+    return res.status(200).send({
+      status: 1,
+      message: "product added successfully",
+      data:product,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: 0,
+      message: error.message,
+    });
+  }
+};
 
-          } catch(error){
-
-            return res.status(500).send({
-              status:1,
-              message:error.message
-            })
-            }
-}
 
 
 export const myProducts=  async (req, res)=>{
@@ -118,11 +197,7 @@ export const deleteProduct= async (req, res)=>{
 
         const productId = new ObjectId(req.params.id);
         const updateProduct = {
-          $set: {
-            title: req.body.title,
-            description: req.body.description,
-            updatedAt:Date.now()
-          }
+ ...req.body 
         }
         const result = await Products.updateOne({ _id: productId, postedBy: req.user._id, isDeleted: false, deletedAt: null, status: true },
          updateProduct);
@@ -191,6 +266,5 @@ let favouriteProduct = await Favourites.deleteOne({ userId: req.user._id, produc
         message: "Something went wrong"
       })
     }
-
-
 }
+

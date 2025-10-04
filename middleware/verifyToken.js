@@ -12,7 +12,7 @@ export const verifyToken = (req, res, next) => {
 
     // Attach user info to request so you can use it later
     req.user = decoded;
-console.log(token);
+// console.log(token);
 
     next();
   } catch (error) {
