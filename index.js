@@ -34,9 +34,7 @@ try {
   }));
   app.use(express.json());
   app.use(cookieParser());
-  app.use('/', (req, res)=>{
-    return res.send( "✅ Api is working")
-  })
+
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")))
   app.use(AuthRoutes);
   app.use(productRoutes);
