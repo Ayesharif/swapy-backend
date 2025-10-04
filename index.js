@@ -28,7 +28,7 @@ try {
   console.log(expiresAt);
   
   app.use(cors({
-    origin: "http://localhost:5173", // your frontend URL
+    origin: "https://swapy-three.vercel.app", // your frontend URL
     credentials: true,
     
   }));
