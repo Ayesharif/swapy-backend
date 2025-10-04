@@ -116,7 +116,8 @@ export const login = async (req, res)=>{
     }, process.env.SECRET, {expiresIn: "24h"})
      res.cookie("token", token,{
       httpOnly:true,
-      secure: true
+      secure: true,
+      sameSite: "none"
     })
 return res.send({
     status : 1,
@@ -428,7 +429,8 @@ export const logOut=(req, res)=>{
             if(decoded){
                 res.clearCookie('token',{
                     httpOnly: true,
-                    secure: true
+                    secure: true,
+                    sameSite: "none"
                 })
                 return res.status(200).send({
                 status: 1,
