@@ -1,5 +1,6 @@
 import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
+import { deleteImage } from '../utils/deleteImage.js';
 
 
 const myDB = client.db("olxClone");
@@ -47,12 +48,22 @@ export const updateUserProfile= async(req, res)=>{
     const    userId =new ObjectId(req.user._id)
 
     const updateData = { ...req.body };
+   
+    const StoredUser = await Users.findOne({ _id: userId});
+    
+
+    if (!StoredUser) {
+      return res.status(500).send({
+        status: 0,
+        message: "User Not Found"
+        })
+      }   
 
     if (req.file) {
+
+    deleteImage(StoredUser.image)
       updateData.image = `/uploads/${req.file.filename}`;
     }
-
-    console.log("user...",updateData);
     
 const userUpdate = await Users.updateOne({ _id: userId , email:req.user.email}, {$set:updateData});
 
@@ -129,9 +140,10 @@ export const addProduct = async (req, res) => {
 export const myProducts=  async (req, res)=>{
   try{
 
-    const oneProduct = await Products.find({ postedBy: req.user._id, isDeleted: false, deletedAt: null });
+    const oneProduct = await Products.find({ postedBy: req.user._id, isDeleted: false, deletedAt: null }, 
+      {projection:{title:1, description:1, category:1, images:1, price:1, productType:1}});
     const response= await oneProduct.toArray();
-    //   console.log(oneProduct);
+
     
     if (!response ||response.length<0) {
       return res.status(404).send({
@@ -192,37 +204,85 @@ export const deleteProduct= async (req, res)=>{
 
     }
     
-    export const updateProduct = async (req, res)=>{
-      try{
+  export const updateProduct = async (req, res) => {
+  try {
+    const productId = new ObjectId(req.params.id);
 
-        const productId = new ObjectId(req.params.id);
-        const updateProduct = {
- ...req.body 
-        }
-        const result = await Products.updateOne({ _id: productId, postedBy: req.user._id, isDeleted: false, deletedAt: null, status: true },
-         updateProduct);
-      
-         if (!result) {
-           return res.status(404).send({
-             status: 0,
-             message: "Product updating failed"
-            })
-          }
+    const storedProduct = await Products.findOne({ _id: productId });
+    if (!storedProduct) {
+      return res.status(404).send({
+        status: 0,
+        message: "Product not found",
+      });
+    }
+    
+console.log("🟢 req.body.images (raw):", req?.body?.images);
 
-          return res.status(200).send({
-            status: 1,
-            message: "Product updated successfully"
-           })
-        }catch(error){
-     
-        
-          return res.status(500).send({
-            status: 0,
-            message: error.message
-          })
+    // ✅ Parse kept images
+    let keptImages = [];
+    try {
+      keptImages = Array.isArray(req.body.images)
+        ? req.body.images
+        : typeof req.body.images === "string"
+        ? JSON.parse(req.body.images)
+        : [];
+    } catch {
+      keptImages = [];
+    }
 
-        }
-}
+    // ✅ Normalize paths (ensure "/uploads/")
+    keptImages = keptImages.map((img) =>
+      img.startsWith("/uploads/") ? img : `/uploads/${path.basename(img)}`
+    );
+
+    // ✅ Find & delete removed images
+    const removedImages = storedProduct.images.filter(
+      (img) => !keptImages.includes(img)
+    );
+
+    if (removedImages.length > 0) {
+      await Promise.all(removedImages.map((imgPath) => deleteImage(imgPath)));
+    }
+
+    // ✅ Handle new uploads
+    let newImagePaths = [];
+    if (req.files && req.files.length > 0) {
+      newImagePaths = req.files.map((file) => `/uploads/${file.filename}`);
+    }
+
+    const finalImages = [...keptImages, ...newImagePaths];
+
+    // ✅ Update product safely
+    const result = await Products.updateOne(
+      { _id: productId },
+      {
+        $set: {
+          ...req.body,
+          images: finalImages,
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(400).send({
+        status: 0,
+        message: "No changes were made to the product",
+      });
+    }
+   const newProduct = await Products.findOne({ _id: productId, postedBy:req.user._id });
+    return res.status(200).send({
+      status: 1,
+      message: "Product updated successfully",
+      data:newProduct
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: 0,
+      message: error.message,
+    });
+  }
+};
+
 
 export const IsFavourite= async(req, res)=>{
 

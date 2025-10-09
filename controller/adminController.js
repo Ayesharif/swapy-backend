@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
+import { deleteImage } from '../utils/deleteImage.js';
 
 const myDB = client.db("olxClone");
 const Products = myDB.collection("products");
@@ -174,12 +175,35 @@ export const updateCategory = async (req, res)=>{
 
   
       const Id = new ObjectId(req.params.id);
-      
+    //   console.log("🔹 BODY:", req.body);
+    // console.log("🔹 FILE:", req.file);
+    // console.log("🔹 PARAM ID:", req.params.id);
+
+    const updateCat={
+      ...req.body,
+    };
+    const StoredCatgory = await Category.findOne({ _id: Id});
+    
+
+    if (!StoredCatgory) {
+      return res.status(500).send({
+        status: 0,
+        message: "Category Not Found"
+        })
+      }   
+
+    if (req.file) {
+    console.log(StoredCatgory);
+    deleteImage(StoredCatgory.image)
+      updateCat.image = `/uploads/${req.file.filename}`;
+    }
+console.log(updateCat);
+     
       const result = await Category.updateOne({ _id: Id},
-         {$set :{category: req.body.category,}});
+         {$set :updateCat});
       
          if (result) {
-                const getCat = await Category.updateOne({ _id: Id});
+                const getCat = await Category.findOne({ _id: Id});
         return res.status(200).send({
           status: 1,
           message: "Category updated successfully",
@@ -198,7 +222,7 @@ export const updateCategory = async (req, res)=>{
 
       return res.status(500).send({
         status: 0,
-        message: error.message,
+        message: `this is error ${error.message}`,
       })
     }
 }

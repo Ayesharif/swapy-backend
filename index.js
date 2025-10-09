@@ -40,10 +40,12 @@ try {
   app.use(express.json());
   app.use(cookieParser());
 
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")))
+  
   app.use(AuthRoutes);
   app.use(productRoutes);
   console.log(process.env.SECRET);
+  
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
   
   app.use(verifyToken)
   

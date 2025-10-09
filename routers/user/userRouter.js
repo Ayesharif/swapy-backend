@@ -24,7 +24,7 @@ router.post('/user/product/:id', verifyToken, deleteProduct)
 
 
 
-router.put('/user/product/:id',verifyToken, updateProduct)
+router.put('/user/product/:id',verifyToken,upload.array("newImages", 5), updateProduct)
 
 
 router.post('/user/favourite/:id', verifyToken, IsFavourite)
