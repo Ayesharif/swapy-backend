@@ -61,7 +61,7 @@ export const updateUserProfile= async(req, res)=>{
 
     if (req.file) {
 
-    deleteImage(StoredUser.image)
+    // deleteImage(StoredUser.image)
       updateData.image = `/uploads/${req.file.filename}`;
     }
     

@@ -14,6 +14,7 @@ const Favourites = myDB.collection("favourites");
 
 
 router.get('/user/profile', verifyToken, getUserProfile)
+
 router.post('/user/profile', verifyToken, upload.single('image'), updateUserProfile)
 router.get('/user/myproducts', verifyToken, myProducts)
 
