@@ -1,6 +1,7 @@
 
 import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
+import jwt from 'jsonwebtoken';
 const myDB = client.db("olxClone");
 const Products = myDB.collection("products");
 const Users = myDB.collection("users");
@@ -152,6 +153,75 @@ export const searchProduct = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({
+      status: 0,
+      message: error.message,
+    });
+  }
+};
+
+
+
+export const getPublicProfile = async (req, res) => {
+  try {
+    let userId;
+    console.log(req?.query?.id);
+    
+    if(req?.query?.id){
+      userId = req.query.id;
+      console.log("params ",userId);
+    }
+    else{
+          const token = req.cookies.token; 
+      
+          const decoded = jwt.verify(token, process.env.SECRET);
+ userId= decoded._id;
+          
+      
+ console.log("logged",userId);
+    }
+
+
+    // ✅ Fetch user with selected fields
+    const user = await Users.findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { firstName: 1, lastName: 1, email: 1, phone: 1, city: 1, image: 1, role: 1 } }
+    );
+
+    if (!user) {
+      return res.status(404).send({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+
+    // ✅ Fetch all non-deleted products by this user
+    const allProducts = await Products.find(
+      { postedBy: userId, isDeleted: false, deletedAt: null, status:true },
+      { projection: { title: 1, description: 1, category: 1, images: 1, price: 1, productType: 1 } }
+    ).toArray();
+
+    // ✅ Check properly if array is empty
+    if (!allProducts || allProducts.length === 0) {
+      return res.status(200).send({
+        status: 1,
+        message: "User found successfully, but no products posted yet",
+        data: user,
+        products: [],
+      });
+    }
+
+    // ✅ Success response
+    return res.status(200).send({
+      status: 1,
+      message: "User found successfully",
+      data: user,
+      products: allProducts,
+    });
+
+  } catch (error) {
+    console.error("❌ Error in getPublicProfile:", error.message);
+    return res.status(500).send({
       status: 0,
       message: error.message,
     });

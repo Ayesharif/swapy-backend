@@ -116,7 +116,10 @@ export const addCategory= async (req, res)=>{
     ...req.body,
   };
     if (req.file) {
-      updateCat.image = `/uploads/${req.file.filename}`;
+  updateCat.image = {
+    image: req.file.path, // Cloudinary hosted URL
+    publicId: req.file.filename, // Cloudinary public_id (used for deleting later)
+  };
     }
 console.log(updateCat);
 
@@ -191,13 +194,22 @@ export const updateCategory = async (req, res)=>{
         message: "Category Not Found"
         })
       }   
-
-    if (req.file) {
-    console.log(StoredCatgory);
-    deleteImage(StoredCatgory.image)
-      updateCat.image = `/uploads/${req.file.filename}`;
-    }
-console.log(updateCat);
+if (req.file) {
+  console.log(updateCat);
+  
+  // 🗑️ Delete the old image from Cloudinary (if it exists)
+  if (updateCat.imageId) {
+    await deleteImage(updateCat.imageId);
+  }
+  
+  // 🌩️ Save the new image info
+  updateCat.image = {
+    image: req.file.path, // Cloudinary hosted URL
+    publicId: req.file.filename, // Cloudinary public_id (used for deleting later)
+  };
+}
+delete updateCat.imageId;
+console.log("cat",updateCat);
      
       const result = await Category.updateOne({ _id: Id},
          {$set :updateCat});
@@ -240,25 +252,10 @@ export const deleteCategory = async (req, res)=>{
           message: "Category Not Found"
         })
       } 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+if(result.image){
+      await deleteImage(result?.image?.publicId);
+}
 
-const imagePath = path.join(__dirname, `../${result.image}`);
-
-fs.unlink(imagePath, (err) => {
-  if (err) {
-    console.error("Error unlinking image:", err);
-    return res.status(500).send({
-      status: 0,
-      message: err.message,
-    });
-  }
-  console.log("Image unlinked successfully!");
-  return res.status(200).send({
-    status: 1,
-    message: "Image unlinked successfully!",
-  });
-});   
       await Category.deleteOne({_id:Id});
       
       return res.status(200).send({

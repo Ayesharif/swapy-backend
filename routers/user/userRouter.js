@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import { verifyToken } from '../../middleware/verifyToken.js';
 import { addProduct, deleteProduct, getUserProfile, IsFavourite, myProducts, updateProduct, updateUserProfile } from '../../controller/userController.js';
 import { upload } from '../../middleware/uploads.js';
+import uploadrouter from '../../middleware/uploadRoute.js';
 const router = express.Router();
 const myDB = client.db("olxClone");
 const Products = myDB.collection("products");
@@ -12,10 +13,10 @@ const Favourites = myDB.collection("favourites");
 
 
 
-
 router.get('/user/profile', verifyToken, getUserProfile)
 
-router.post('/user/profile', verifyToken, upload.single('image'), updateUserProfile)
+router.post("/user/profile", verifyToken, upload.single("images"), updateUserProfile);
+
 router.get('/user/myproducts', verifyToken, myProducts)
 
 router.post('/user/product', verifyToken, upload.array("images", 5), addProduct)

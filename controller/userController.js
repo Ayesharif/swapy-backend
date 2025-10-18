@@ -59,11 +59,22 @@ export const updateUserProfile= async(req, res)=>{
         })
       }   
 
-    if (req.file) {
+if (req.file) {
+  console.log(updateData);
+  
+  // 🗑️ Delete the old image from Cloudinary (if it exists)
+  if (updateData.imageId) {
+    await deleteImage(updateData.imageId);
+ delete updateData.imageId;
+  }
 
-    // deleteImage(StoredUser.image)
-      updateData.image = `/uploads/${req.file.filename}`;
-    }
+
+  // 🌩️ Save the new image info
+  updateData.image = {
+    image: req.file.path, // Cloudinary hosted URL
+    publicId: req.file.filename, // Cloudinary public_id (used for deleting later)
+  };
+}
     
 const userUpdate = await Users.updateOne({ _id: userId , email:req.user.email}, {$set:updateData});
 
@@ -96,7 +107,10 @@ const userUpdate = await Users.updateOne({ _id: userId , email:req.user.email}, 
 export const addProduct = async (req, res) => {
   try {
     // map uploaded files to paths
-    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+const imageData = req.files.map(file => ({
+  imageUrl: file.path,       // Cloudinary URL
+  publicId: file.filename,   // Cloudinary public_id
+}));
 
     const product = {
       title: req.body.title,
@@ -108,7 +122,7 @@ export const addProduct = async (req, res) => {
       deletedAt: null,
       isDeleted: false,
       productType: req.body.productType,
-      images: imagePaths,   // ✅ store image paths
+      images: imageData,   // ✅ store image paths
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -137,7 +151,7 @@ export const addProduct = async (req, res) => {
 
 
 
-export const myProducts=  async (req, res)=>{
+export const myProducts=  async (req, res)=>{ 
   try{
 
     const oneProduct = await Products.find({ postedBy: req.user._id, isDeleted: false, deletedAt: null }, 
@@ -203,56 +217,54 @@ export const deleteProduct= async (req, res)=>{
       }
 
     }
-    
-  export const updateProduct = async (req, res) => {
+
+export const updateProduct = async (req, res) => {
   try {
     const productId = new ObjectId(req.params.id);
 
     const storedProduct = await Products.findOne({ _id: productId });
     if (!storedProduct) {
-      return res.status(404).send({
-        status: 0,
-        message: "Product not found",
-      });
+      return res.status(404).json({ status: 0, message: "Product not found" });
     }
-    
-console.log("🟢 req.body.images (raw):", req?.body?.images);
 
-    // ✅ Parse kept images
+    // 🟢 Step 1: Parse kept images from frontend (these are already existing Cloudinary URLs)
     let keptImages = [];
     try {
       keptImages = Array.isArray(req.body.images)
-        ? req.body.images
+        ? req.body.images.map((img) => JSON.parse(img))
         : typeof req.body.images === "string"
         ? JSON.parse(req.body.images)
         : [];
-    } catch {
+    } catch (err) {
       keptImages = [];
     }
 
-    // ✅ Normalize paths (ensure "/uploads/")
-    keptImages = keptImages.map((img) =>
-      img.startsWith("/uploads/") ? img : `/uploads/${path.basename(img)}`
-    );
-
-    // ✅ Find & delete removed images
+    // 🟢 Step 2: Identify images removed by the user
     const removedImages = storedProduct.images.filter(
-      (img) => !keptImages.includes(img)
+      (oldImg) =>
+        !keptImages.some((newImg) => newImg.publicId === oldImg.publicId)
     );
 
+    // 🗑️ Step 3: Delete removed images from Cloudinary
     if (removedImages.length > 0) {
-      await Promise.all(removedImages.map((imgPath) => deleteImage(imgPath)));
+      await Promise.all(
+        removedImages.map((img) => deleteImage(img.publicId))
+      );
     }
 
-    // ✅ Handle new uploads
-    let newImagePaths = [];
+    // 🟢 Step 4: Handle new uploads (via multer-storage-cloudinary)
+    let newImages = [];
     if (req.files && req.files.length > 0) {
-      newImagePaths = req.files.map((file) => `/uploads/${file.filename}`);
+      newImages = req.files.map((file) => ({
+        imageUrl: file.path, // Cloudinary hosted URL
+        publicId: file.filename, // Cloudinary public_id
+      }));
     }
 
-    const finalImages = [...keptImages, ...newImagePaths];
+    // 🟢 Step 5: Merge kept + newly uploaded images
+    const finalImages = [...keptImages, ...newImages];
 
-    // ✅ Update product safely
+    // 🟢 Step 6: Update product
     const result = await Products.updateOne(
       { _id: productId },
       {
@@ -264,24 +276,25 @@ console.log("🟢 req.body.images (raw):", req?.body?.images);
     );
 
     if (result.modifiedCount === 0) {
-      return res.status(400).send({
+      return res.status(400).json({
         status: 0,
         message: "No changes were made to the product",
       });
     }
-   const newProduct = await Products.findOne({ _id: productId, postedBy:req.user._id });
-    return res.status(200).send({
+
+    const updatedProduct = await Products.findOne({ _id: productId });
+
+    res.status(200).json({
       status: 1,
-      message: "Product updated successfully",
-      data:newProduct
+      message: "✅ Product updated successfully",
+      data: updatedProduct,
     });
   } catch (error) {
-    return res.status(500).send({
-      status: 0,
-      message: error.message,
-    });
+    console.error("❌ Error in updateProduct:", error);
+    res.status(500).json({ status: 0, message: error.message });
   }
 };
+
 
 
 export const IsFavourite= async(req, res)=>{
