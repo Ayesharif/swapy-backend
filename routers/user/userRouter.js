@@ -2,7 +2,7 @@ import express from 'express'
 import { client } from '../../dbConfig.js';
 import { ObjectId } from 'mongodb';
 import { verifyToken } from '../../middleware/verifyToken.js';
-import { addProduct, deleteProduct, getUserProfile, IsFavourite, myProducts, updateProduct, updateUserProfile } from '../../controller/userController.js';
+import { addProduct, deleteProduct, getUserProfile, IsFavourite, MyFavourite, myProducts, updateProduct, updateUserProfile } from '../../controller/userController.js';
 import { upload } from '../../middleware/uploads.js';
 import uploadrouter from '../../middleware/uploadRoute.js';
 const router = express.Router();
@@ -29,6 +29,7 @@ router.post('/user/product/:id', verifyToken, deleteProduct)
 router.put('/user/product/:id',verifyToken,upload.array("newImages", 5), updateProduct)
 
 
+router.get('/user/favourite', verifyToken, MyFavourite)
 router.post('/user/favourite/:id', verifyToken, IsFavourite)
 
 export default router;

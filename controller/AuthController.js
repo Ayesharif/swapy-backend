@@ -80,7 +80,7 @@ export const login = async (req, res)=>{
 
 
      if( !req.body.password || !req.body.email){
- return res.status().send({
+ return res.status(400).send({
         status : 0,
         message : "Email or Password is required"
       })
@@ -90,21 +90,21 @@ export const login = async (req, res)=>{
         const emailFormat = /^[a-zA-Z0-9_.+]+(?<!^[0-9]*)@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 
         if(!email.match(emailFormat)){
-      return res.send({
+      return res.status(400).send({
         status : 0,
         message : "Email is Invalid"
       })
     }
         const user = await Users.findOne({email: email})
         if(!user){
-              return res.send({
+              return res.status(400).send({
         status : 0,
         message : "Email is not registered!"
       })
         }
    const matchPassword = await bcrypt.compareSync(req.body.password, user.password)
     if(!matchPassword){
-      return res.send({
+      return res.status(401).send({
         status : 0,
         message : "Email or Password is incorrect"
       })
@@ -119,7 +119,7 @@ export const login = async (req, res)=>{
       secure: true,
       sameSite: "none"
     })
-return res.send({
+return res.status(200).send({
     status : 1,
       message : "Login Successful",
       data : {

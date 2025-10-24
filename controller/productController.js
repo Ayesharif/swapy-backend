@@ -110,46 +110,38 @@ export const getProductById= async (req, res)=>{
 }
 export const searchProduct = async (req, res) => {
   try {
-    const { title, city, price } = req.query;
+   const { city, priceMin, priceMax, title } = req.query;
+    console.log(city, priceMin, priceMax, title);
 
-    // Step 1: build product filters
-    const filters = {
-      ...(title && { title }),
-      ...(price && { price: parseFloat(price) }),
-    };
-
-    let cityFilter = {};
-    if (city) {
-      // Step 2: find all users in that city
-      const cityUsers = await Users.find({ city }).project({ _id: 1 }).toArray();
-      const userIds = cityUsers.map(user => user._id);
-      if (userIds.length > 0) {
-        cityFilter = { postedBy: { $in: userIds } };
-      } else {
-        return res.status(404).json({
-          status: 0,
-          message: 'No users found in this city',
-        });
+    const result = await Products.aggregate([
+      {
+        $lookup: {
+          from: 'users',             // collection name in MongoDB
+          localField: 'postedBy',    // field in Products
+          foreignField: '_id',       // field in Users
+          as: 'userData'
+        }
+      
+      },
+      { $unwind: '$userData' },
+      {
+        $match: {
+          ...(city ? { 'userData.city': city } : {}), // filter only if provided
+          ...(title ? { title: { $regex: title, $options: 'i' } } : {}),
+          price: {
+            $gte: parseInt(priceMin) || 0,
+            $lte: parseInt(priceMax) || 1000000000 // upper limit fallback
+          }
+        }
       }
-    }
+    ]).toArray();
 
-    // Step 3: merge both filters
-    const finalFilter = { ...filters, ...cityFilter };
 
-    // Step 4: find products
-    const products = await Products.find(finalFilter).toArray();
-
-    if (!products || products.length === 0) {
-      return res.status(404).json({
-        status: 0,
-        message: 'No products found',
-      });
-    }
-
+  console.log(result);
     return res.status(200).json({
       status: 1,
       message: 'Products available',
-      data: products,
+      data: result,
     });
   } catch (error) {
     return res.status(500).json({

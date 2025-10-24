@@ -295,6 +295,47 @@ export const updateProduct = async (req, res) => {
   }
 };
 
+export const MyFavourite = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get all favourites for this user
+    const favourites = await Favourites.find({ userId });
+    console.log(favourites);
+    
+const favv= await favourites.toArray();
+    if (favv.length<0) {
+      return res.status(404).send({
+        status: 1,
+        message: "No favourite products found",
+        products: [],
+      });
+    }
+
+    // Extract product IDs
+    const productIds = favv.map(fav => fav.productId);
+
+    // Fetch all products in parallel using Promise.all
+    const products = await Promise.all(
+      productIds.map(async (id) => {
+        const product = await Products.findOne({ _id: id });
+        return product;
+      })
+    );
+
+    return res.status(200).send({
+      status: 1,
+      message: "Favourite products fetched successfully",
+      products,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      status: 0,
+      message: error.message,
+    });
+  }
+};
 
 
 export const IsFavourite= async(req, res)=>{
@@ -314,19 +355,25 @@ try{
 if(checkFavourite){
 
 let favouriteProduct = await Favourites.deleteOne({ userId: req.user._id, productId: productId });
+      const getFavourite = await Favourites.find({ userId: req.user._id});
+  const response= await getFavourite.toArray();
     
     return res.status(200).send({
         status: 1,
-        message: "removed from favourite"
+        message: "Removed from favourite",
+        favourites: response
     })
 }else{
 
 
     let favouriteProduct = await Favourites.insertOne({ userId: req.user._id, productId: productId });
+            const getFavourite = await Favourites.find({ userId: req.user._id});
+  const response= await getFavourite.toArray();
     
     return res.status(200).send({
         status: 1,
-        message: "added to favourite"
+        message: "Added to favourite",
+        favourites:response
     })
 }
     
