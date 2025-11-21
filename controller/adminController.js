@@ -1,15 +1,16 @@
-import { client } from '../dbConfig.js';
+// import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
 import { deleteImage } from '../utils/deleteImage.js';
+import { Category } from '../model/Category.js';
 
-const myDB = client.db("olxClone");
-const Products = myDB.collection("products");
-const Users = myDB.collection("users");
-const Favourites = myDB.collection("favourites");
-const Category = myDB.collection("category");
+// const myDB = client.db("olxClone");
+// const Products = myDB.collection("products");
+// const Users = myDB.collection("users");
+// const Favourites = myDB.collection("favourites");
+// const Category = myDB.collection("category");
 
 
 export const getAllProduct = async (req, res)=>{
@@ -121,7 +122,7 @@ export const addCategory= async (req, res)=>{
     publicId: req.file.filename, // Cloudinary public_id (used for deleting later)
   };
     }
-console.log(updateCat);
+//console.log(updateCat);
 
       const response = await Category.insertOne(updateCat);
       if (response) {
@@ -147,40 +148,38 @@ console.log(updateCat);
 }
 
 
-export const getAllCategory = async (req, res)=>{
-try{
+export const getAllCategory = async (req, res) => {
+  try {
+    const response = await Category.find();
 
-
-  const allCatgory = Category.find();
-  const response = await allCatgory.toArray();
-  if (response.length > 0) {
-    return res.status(200).send(response)
-
-  } else {
-
-    return res.status(404).send({
-      status: 0,
-      message: "Category not available"
-    })
-  }
-    }catch(error){
-
-
-      return res.status(500).send({
+    if (response.length > 0) {
+      return res.status(200).send({
+        status: 1,
+        data: response
+      });
+    } else {
+      return res.status(404).send({
         status: 0,
-        message: error.message,
-      })
+        message: "Category not available"
+      });
     }
-} 
+
+  } catch (error) {
+    return res.status(500).send({
+      status: 0,
+      message: error.message
+    });
+  }
+};
 
 export const updateCategory = async (req, res)=>{
   try{
 
   
       const Id = new ObjectId(req.params.id);
-    //   console.log("🔹 BODY:", req.body);
-    // console.log("🔹 FILE:", req.file);
-    // console.log("🔹 PARAM ID:", req.params.id);
+    //   //console.log("🔹 BODY:", req.body);
+    //console.log("🔹 FILE:", req.file);
+    //console.log("🔹 PARAM ID:", req.params.id);
 
     const updateCat={
       ...req.body,
@@ -195,7 +194,7 @@ export const updateCategory = async (req, res)=>{
         })
       }   
 if (req.file) {
-  console.log(updateCat);
+  //console.log(updateCat);
   
   // 🗑️ Delete the old image from Cloudinary (if it exists)
   if (updateCat.imageId) {
@@ -209,7 +208,7 @@ if (req.file) {
   };
 }
 delete updateCat.imageId;
-console.log("cat",updateCat);
+//console.log("cat",updateCat);
      
       const result = await Category.updateOne({ _id: Id},
          {$set :updateCat});

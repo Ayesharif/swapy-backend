@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>learing sockets</h1>
+    <label for="message">Type Message</label>
+    <input type="text" name="message" id="message">
+    <button onclick="handleSubmit()">Send Message</button>
+    <div id="messages"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io()
+        const input = document.getElementById('message');
+        const messages = document.getElementById('messages');
+
+        const handleSubmit = () => {
+            // e.preventDefault();
+            if (input.value) {
+                socket.emit('sendMessage', { message : input.value , receiverId : 2 , senderId : 1});
+                input.value = '';
+            }
+        }
+        socket.on('getMessage', (msg) => {
+            //console.log(msg);
+            
+    const item = document.createElement('li');
+    item.textContent = msg.message;
+    messages.appendChild(item);
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+
+   
+        // const handleSockect = () =>{
+        // }
+    </script>
+</body>
+
+</html>

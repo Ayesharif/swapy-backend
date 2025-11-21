@@ -20,7 +20,7 @@
 //         console.error("❌ Error unlinking image:", err.message);
 //         return reject(err);
 //       }
-//       console.log("🗑️ Image deleted:", relativeImagePath);
+//       //console.log("🗑️ Image deleted:", relativeImagePath);
 //       resolve("Image deleted successfully!");
 //     });
 //   });
@@ -33,7 +33,7 @@ export const deleteImage = async (publicId) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     if (result.result === "ok") {
-      console.log("🗑️ Image deleted:", publicId);
+      //console.log("🗑️ Image deleted:", publicId);
       return true;
     } else {
       console.warn("⚠️ No image deleted or already gone:", publicId);

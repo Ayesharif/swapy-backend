@@ -1,12 +1,19 @@
-import { client } from '../dbConfig.js';
+// import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
 import { deleteImage } from '../utils/deleteImage.js';
+import { User } from '../model/User.js';
+import { Product } from '../model/product.js';
+import { Favourite } from '../model/Favourite.js';
+import { Chat } from '../model/Chat.js';
 
 
-const myDB = client.db("olxClone");
-const Products = myDB.collection("products");
-const Users = myDB.collection("users");
-const Favourites = myDB.collection("favourites");
+// const myDB = client.db("olxClone");
+// const Products = myDB.collection("products");
+// const Users = myDB.collection("users");
+// const Chats = myDB.collection("chats");
+// const Messages = myDB.collection("messages");
+
+// const Favourites = myDB.collection("favourites");
 
 
 
@@ -16,7 +23,7 @@ export const getUserProfile= async(req, res)=>{
     
     const    userId =new ObjectId(req.user._id)
    
-const user = await Users.findOne({ _id: userId , email:req.user.email},{projection:{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1, role:1 }});
+const user = await User.findOne({ _id: userId , email:req.user.email},{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1, role:1 });
 
 if(!user){
   return res.status(404).send({
@@ -24,7 +31,7 @@ if(!user){
     status: 0
   })
 }
-// console.log("user",user);
+//console.log("user",user);
 
 return res.status(200).send({
 data: user,
@@ -49,7 +56,7 @@ export const updateUserProfile= async(req, res)=>{
 
     const updateData = { ...req.body };
    
-    const StoredUser = await Users.findOne({ _id: userId});
+    const StoredUser = await User.findOne({ _id: userId});
     
 
     if (!StoredUser) {
@@ -60,7 +67,7 @@ export const updateUserProfile= async(req, res)=>{
       }   
 
 if (req.file) {
-  console.log(updateData);
+  //console.log(updateData);
   
   // 🗑️ Delete the old image from Cloudinary (if it exists)
   if (updateData.imageId) {
@@ -76,13 +83,13 @@ if (req.file) {
   };
 }
     
-const userUpdate = await Users.updateOne({ _id: userId , email:req.user.email}, {$set:updateData});
+const userUpdate = await User.updateOne({ _id: userId , email:req.user.email}, {$set:updateData});
 
 
 
     if (userUpdate.modifiedCount > 0) {
 
-      const user = await Users.findOne({ _id: userId , email:req.user.email},{projection:{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1 }});
+      const user = await User.findOne({ _id: userId , email:req.user.email},{projection:{firstName:1, lastName:1, email:1, phone:1, city: 1, image:1 }});
       return res.status(200).send({
         status: 1,
         message: "Profile updated successfully",
@@ -123,11 +130,11 @@ const imageData = req.files.map(file => ({
       isDeleted: false,
       productType: req.body.productType,
       images: imageData,   // ✅ store image paths
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      // createdAt: Date.now(),
+      // updatedAt: Date.now(),
     };
 
-    const response = await Products.insertOne(product);
+    const response = await Product.create(product);
 
     if (!response) {
       return res.status(404).send({
@@ -151,42 +158,40 @@ const imageData = req.files.map(file => ({
 
 
 
-export const myProducts=  async (req, res)=>{ 
-  try{
+export const myProducts = async (req, res) => { 
+  try {
+    // Get all products by the logged-in user
+    const products = await Product.find(
+      { postedBy: req.user._id, isDeleted: false, deletedAt: null },
+      { title: 1, description: 1, category: 1, images: 1, price: 1, productType: 1 }
+    );
 
-    const oneProduct = await Products.find({ postedBy: req.user._id, isDeleted: false, deletedAt: null }, 
-      {projection:{title:1, description:1, category:1, images:1, price:1, productType:1}});
-    const response= await oneProduct.toArray();
-
-    
-    if (!response ||response.length<0) {
-      return res.status(404).send({
-      status: 0,
-      message: "Product not found"
-      })
-      
+    if (!products || products.length === 0) {
+      return res.status(404).json({
+        status: 0,
+        message: "Products not found"
+      });
     }
-    return res.status(200).send({
-      
-      data:response
-    })
-    
-  }
-  catch(error){
-    return res.status(500).send({
-    status: 0,
-    message: error.message
-    })
 
+    return res.status(200).json({
+      data: products
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      status: 0,
+      message: error.message
+    });
   }
-}
+};
+
 
 export const deleteProduct= async (req, res)=>{
 
   try{
 
     const productId = new ObjectId(req.params.id);
-    const checkproduct = await Products.findOne({ _id: productId, postedBy: req.user._id });
+    const checkproduct = await Product.findOne({ _id: productId, postedBy: req.user._id });
     if (!checkproduct) {
       return res.status(404).send({
           status: 0,
@@ -194,7 +199,7 @@ export const deleteProduct= async (req, res)=>{
         })
       }
     
-        const deleteProduct = await Products.updateOne({ _id: productId, postedBy: req.user._id }, { $set: { isDeleted: true, deletedAt: Date.now() } }, {});
+        const deleteProduct = await Product.updateOne({ _id: productId, postedBy: req.user._id }, { $set: { isDeleted: true, deletedAt: Date.now() } }, {});
     
         if (!deleteProduct) {
           return res.status(500).send({
@@ -222,7 +227,7 @@ export const updateProduct = async (req, res) => {
   try {
     const productId = new ObjectId(req.params.id);
 
-    const storedProduct = await Products.findOne({ _id: productId });
+    const storedProduct = await Product.findOne({ _id: productId });
     if (!storedProduct) {
       return res.status(404).json({ status: 0, message: "Product not found" });
     }
@@ -265,7 +270,7 @@ export const updateProduct = async (req, res) => {
     const finalImages = [...keptImages, ...newImages];
 
     // 🟢 Step 6: Update product
-    const result = await Products.updateOne(
+    const result = await Product.updateOne(
       { _id: productId },
       {
         $set: {
@@ -282,7 +287,7 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    const updatedProduct = await Products.findOne({ _id: productId });
+    const updatedProduct = await Product.findOne({ _id: productId });
 
     res.status(200).json({
       status: 1,
@@ -300,12 +305,10 @@ export const MyFavourite = async (req, res) => {
     const userId = req.user._id;
 
     // Get all favourites for this user
-    const favourites = await Favourites.find({ userId });
-    console.log(favourites);
-    
-const favv= await favourites.toArray();
-    if (favv.length<0) {
-      return res.status(404).send({
+    const favourites = await Favourite.find({ userId });
+
+    if (favourites.length === 0) {
+      return res.status(404).json({
         status: 1,
         message: "No favourite products found",
         products: [],
@@ -313,78 +316,253 @@ const favv= await favourites.toArray();
     }
 
     // Extract product IDs
-    const productIds = favv.map(fav => fav.productId);
+    const productIds = favourites.map(fav => fav.productId);
 
-    // Fetch all products in parallel using Promise.all
-    const products = await Promise.all(
-      productIds.map(async (id) => {
-        const product = await Products.findOne({ _id: id });
-        return product;
-      })
-    );
+    // Fetch all products in parallel
+    const products = await Product.find({ _id: { $in: productIds } });
 
-    return res.status(200).send({
+    return res.status(200).json({
       status: 1,
       message: "Favourite products fetched successfully",
       products,
     });
 
   } catch (error) {
-    return res.status(500).send({
+    return res.status(500).json({
       status: 0,
       message: error.message,
     });
   }
 };
 
+export const IsFavourite = async (req, res) => {
+  try {
+    const productId = req.params.id;
 
-export const IsFavourite= async(req, res)=>{
+    // Check if product exists and is active
+    const checkProduct = await Product.findOne({
+      _id: productId,
+      isDeleted: false,
+      deletedAt: null,
+      status: true
+    });
 
-try{
+    if (!checkProduct) {
+      return res.status(404).json({
+        status: 0,
+        message: "Product not found"
+      });
+    }
 
-  const productId = new ObjectId(req.params.id);
-  const checkproduct = await Products.findOne({ _id: productId, isDeleted: false, deletedAt: null, status: true });
+    // Check if favourite already exists
+    const checkFavourite = await Favourite.findOne({
+      userId: req.user._id,
+      productId: productId
+    });
 
-  if (!checkproduct) {
-      return res.status(404).send({
-          status: 0,
-          message: "Product not found"
-        })
-    } 
-      const checkFavourite = await Favourites.findOne({ userId: req.user._id, productId: productId });
-if(checkFavourite){
+    if (checkFavourite) {
+      // Remove from favourites
+      await Favourite.deleteOne({ userId: req.user._id, productId: productId });
 
-let favouriteProduct = await Favourites.deleteOne({ userId: req.user._id, productId: productId });
-      const getFavourite = await Favourites.find({ userId: req.user._id});
-  const response= await getFavourite.toArray();
-    
-    return res.status(200).send({
+      // Get updated favourites
+      const favourites = await Favourite.find({ userId: req.user._id });
+
+      return res.status(200).json({
         status: 1,
         message: "Removed from favourite",
-        favourites: response
-    })
-}else{
+        favourites
+      });
+    } else {
+      // Add to favourites
+      await Favourite.create({ userId: req.user._id, productId: productId });
 
+      // Get updated favourites
+      const favourites = await Favourite.find({ userId: req.user._id });
 
-    let favouriteProduct = await Favourites.insertOne({ userId: req.user._id, productId: productId });
-            const getFavourite = await Favourites.find({ userId: req.user._id});
-  const response= await getFavourite.toArray();
-    
-    return res.status(200).send({
+      return res.status(200).json({
         status: 1,
         message: "Added to favourite",
-        favourites:response
-    })
-}
-    
-
-  }catch(error){
-
-
-      return res.status(500).send({
-        status: 0,
-        message: "Something went wrong"
-      })
+        favourites
+      });
     }
-}
 
+  } catch (error) {
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong"
+    });
+  }
+};
+
+export const newChat= async(req, res)=>{
+
+}
+export const sendMessage = async (data) => {
+// console.log(req.body);
+
+  const {receiverId, productId, message} = data.body;
+  const senderId=data.sender;
+  
+  if (!senderId || !receiverId || !message) {
+    return res.status(400).send("Missing fields");
+  }
+//   const chat={
+//     senderId,
+//     receiverId, 
+//     productId
+//   }
+// console.log(message);
+// const query = {
+//   $or: [
+//     { senderId, receiverId },
+//     { senderId: receiverId, receiverId: senderId },
+//   ],
+// };
+// if (productId) query.productId = productId;
+
+// const checkChat= await Chat.findOne(query)
+
+const checkUser1 = await User.findOne({ _id: new ObjectId(receiverId) });
+const checkUser2 = await User.findOne({ _id: new ObjectId(senderId) });
+const checkProduct = await Product.findOne({ _id: new ObjectId(productId) });
+  if (!checkUser1 || !checkUser2) {
+    throw new Error("User not found");
+  }
+  if (!checkUser1 || !checkUser2    ) {
+    throw new Error("User not found");
+  }
+
+  const newMessage = {
+    senderId,
+    receiverId,
+    productId: productId,
+    message
+  };
+
+  await Chat.insertOne(newMessage);
+  return newMessage;
+};
+
+
+// 💬 Get Messages between two users
+export const getMessages = async (req, res) => {
+ try {
+    const { otherId, productId } = req.params;
+    const myId = req.user._id;
+
+    const messages = await Chat.find({
+      productId,
+      $or: [
+        { senderId: myId, receiverId: otherId },
+        { senderId: otherId, receiverId: myId }
+      ]
+    }).sort({ createdAt: 1 });
+
+    res.json({ success: true, data: messages });
+
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+
+export const getContacts = async (req, res) => {
+  try {
+    const myId =new ObjectId(req.user._id);
+
+ const contacts = await Chat.aggregate([
+      // 1. Match user messages
+      {
+        $match: {
+          $or: [
+            { senderId: myId },
+            { receiverId: myId }
+          ]
+        }
+      },
+
+      // 2. Determine the other user
+      {
+        $project: {
+          otherUser: {
+            $cond: [
+              { $eq: ["$senderId", myId] },
+              "$receiverId",
+              "$senderId"
+            ]
+          },
+          productId: 1,
+          message: 1,
+          createdAt: 1
+        }
+      },
+
+      // 3. Group by (otherUser + product)
+      {
+        $group: {
+          _id: {
+            otherUser: "$otherUser",
+            productId: "$productId"
+          },
+          lastMessage: { $last: "$message" },
+          lastMessageTime: { $last: "$createdAt" }
+        }
+      },
+
+      // 4. Lookup user data
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id.otherUser",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      { $unwind: "$user" },
+
+      // 5. Lookup product data
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id.productId",
+          foreignField: "_id",
+          as: "product"
+        }
+      },
+      { $unwind: "$product" },
+
+      // 6. Only send selected fields
+      {
+        $project: {
+          _id: 0,
+          otherUser: "$_id.otherUser",
+          productId: "$_id.productId",
+          lastMessage: 1,
+          lastMessageTime: 1,
+          user: {
+            _id: "$user._id",
+            firstName: "$user.firstName",
+            lastName: "$user.lastName",
+            image: "$user.image"
+          },
+          product: {
+            _id: "$product._id",
+            title: "$product.title",
+            price: "$product.price",
+            images: "$product.images"
+          }
+        }
+      },
+
+      // 7. Sort latest first
+      {
+        $sort: { lastMessageTime: -1 }
+      }
+    ]);
+
+    res.status(200).json({ success: true, data: contacts });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

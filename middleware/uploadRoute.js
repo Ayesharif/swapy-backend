@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    console.log("File uploaded:", req.file);
+    //console.log("File uploaded:", req.file);
     return res.status(200).json({
       message: "File uploaded successfully",
       file: req.file,

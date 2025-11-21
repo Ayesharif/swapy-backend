@@ -1,14 +1,15 @@
 
-import { client } from '../dbConfig.js';
+// import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const myDB = client.db("olxClone");
-const Users = myDB.collection("users");
+// const myDB = client.db("olxClone");
+// const Users = myDB.collection("users");
 
 import nodemailer from 'nodemailer'
 import otpGenerator from "otp-generator";
+import { User } from '../model/User.js';
 
 export const register =async (req, res)=>{
         if(!req.body.firstName || !req.body.lastName || !req.body.phone || !req.body.password || !req.body.email){
@@ -28,7 +29,7 @@ export const register =async (req, res)=>{
     
     if(userEmail.match(emailFormat) && req.body.password.match(passwordValidation)){
     
-        const checkUser = await Users.findOne({email: userEmail})
+        const checkUser = await User.findOne({email: userEmail})
     
         if(checkUser){
                             return res.status(409).send({
@@ -52,7 +53,7 @@ export const register =async (req, res)=>{
             }
             
             
-            const response=  await Users.insertOne(user);
+            const response=  await User.create(user);
             if(response){
                 return res.status(201).send({
                   message:"User registeration successfully",
@@ -95,7 +96,9 @@ export const login = async (req, res)=>{
         message : "Email is Invalid"
       })
     }
-        const user = await Users.findOne({email: email})
+        const user = await User.findOne({email: email}).select("+password")
+        // console.log(user);
+        
         if(!user){
               return res.status(400).send({
         status : 0,
@@ -159,7 +162,7 @@ pass: process.env.password,
     }
 
     // Check if user exists
-    const user = await Users.findOne({ email: email });
+    const user = await User.findOne({ email: email });
     if (!user) {
       return res.status(404).json({
         status: 0,
@@ -179,7 +182,7 @@ pass: process.env.password,
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
     // Save OTP to user
-    await Users.updateOne(
+    await User.updateOne(
       { email: email },
       { $set: { otp: otp, expiresAt: expiresAt } }
     );
@@ -207,7 +210,7 @@ pass: process.env.password,
     // Send email
     const info = await transporter.sendMail(mailOptions);
 
-    console.log('Email sent: ' + info.response);
+    //console.log('Email sent: ' + info.response);
     res.json({
       status: 1,
       message: 'OTP generated and sent successfully',
@@ -239,7 +242,7 @@ export const verifyOtp = async (req, res) => {
       });
     }
 
-    const verify = await Users.findOne({ email });
+    const verify = await User.findOne({ email });
 
     if (!verify) {
       return res.status(404).json({
@@ -304,8 +307,8 @@ if(!email.match(emailFormat) || !password.match(passwordValidation) || !otp.matc
       })
     }
 
-     const verify= await Users.findOne({email:email, otp:otp});
-     console.log(verify);
+     const verify= await User.findOne({email:email, otp:otp});
+     //console.log(verify);
      
 if(!verify){
 res.status(404).json({
@@ -320,7 +323,7 @@ const hashedPassword = await bcrypt.hashSync(password)
 //                 message: "Link has expired. Please request again."
 //             });
 //         }
-await Users.updateOne(
+await User.updateOne(
       { email: email, otp:otp },
       { $set: { password:hashedPassword } }
     );
@@ -334,20 +337,20 @@ res.status(200).send({
   //         let decoded = jwt.verify(token, process.env.SECRET, (err, decoded)=>{
   //             if (err) {
   //   if (err.name === "TokenExpiredError") {
-  //     console.log("Token expired");
+  //     //console.log("Token expired");
   //     return res.status(401).send({
   //       status:0,
   //       message:"Token expired"
   //     })
   //   } else {
-  //     console.log("Invalid token");
+  //     //console.log("Invalid token");
   //           return res.status(401).send({
   //       status:0,
   //       message:"Invalid token"
   //     })
   //   }
   // } else {
-  //   console.log("Valid token:", decoded);
+  //   //console.log("Valid token:", decoded);
   // }
   //         });
           
@@ -396,7 +399,7 @@ export const authMe=async (req, res)=>{
   } else {
 
 
-      const checkUser = await Users.findOne({ _id: new ObjectId(decoded._id)}, {projection:{password:0, isVerified:0, status:0,expiresAt:0, otp:0}});
+      const checkUser = await User.findOne({ _id: new ObjectId(decoded._id)}, {projection:{password:0, isVerified:0, status:0,expiresAt:0, otp:0}});
     return res.status(200).send({
                 status: 1,
                 data : checkUser
