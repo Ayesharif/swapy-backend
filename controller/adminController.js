@@ -5,6 +5,8 @@ import path from 'path';
 import { fileURLToPath } from "url";
 import { deleteImage } from '../utils/deleteImage.js';
 import { Category } from '../model/Category.js';
+import { Product } from '../model/Product.js';
+import { User } from '../model/User.js';
 
 // const myDB = client.db("olxClone");
 // const Products = myDB.collection("products");
@@ -13,28 +15,27 @@ import { Category } from '../model/Category.js';
 // const Category = myDB.collection("category");
 
 
-export const getAllProduct = async (req, res)=>{
-try{
+export const getAllProduct = async (req, res) => {
+  try {
+    const products = await Product.find();
 
-  const allProduct = Products.find();
-  const response = await allProduct.toArray();
-  if (response.length > 0) {
-    return res.status(200).send(response)
-    
-  } else {
-    
+    if (products.length > 0) {
+      return res.status(200).send(products);
+    }
+
     return res.status(404).send({
       status: 0,
-      message: "Product not found"
-    })
-  }
-}catch(error){
-      return res.status(500).send({
+      message: "Product not found",
+    });
+
+  } catch (error) {
+    return res.status(500).send({
       status: 0,
-      message: error.message,
-    })
-}
-}
+      message: error.message
+    });
+  }
+};
+
 
 export const productStatus= async(req, res)=>{
 
@@ -43,7 +44,7 @@ try{
   const productId = new ObjectId(req.params.id);
 
 
-  const checkproduct = await Products.findOne({ _id: productId});
+  const checkproduct = await Product.findOne({ _id: productId});
 
   if (!checkproduct) {
       return res.status(404).send({
@@ -52,8 +53,8 @@ try{
         })
     } 
     if(checkproduct.status == true){
-      await Products.updateOne({_id: productId}, {$set:{status:false}})
-        const checkproduct = await Products.findOne({ _id: productId});
+      await Product.updateOne({_id: productId}, {$set:{status:false}})
+        const checkproduct = await Product.findOne({ _id: productId});
       return res.status(200).send({
           status: 1,
           message: "Product blocked successfuly",
@@ -61,8 +62,8 @@ try{
 
         })
     }    else if(checkproduct.status == false){
-      await Products.updateOne({_id: productId}, {$set:{status:true}})
-              const checkproduct = await Products.findOne({ _id: productId});
+      await Product.updateOne({_id: productId}, {$set:{status:true}})
+              const checkproduct = await Product.findOne({ _id: productId});
       return res.status(200).send({
           status: 1,
           message: "Product unblocked successfuly",
@@ -89,7 +90,7 @@ export const getProductById= async (req, res)=>{
   try{
 
     const productId = new ObjectId(req.params.id);
-    const oneProduct = await Products.findOne({ _id: productId, status: true, isDeleted: false, deletedAt: null });
+    const oneProduct = await Product.findOne({ _id: productId, status: true, isDeleted: false, deletedAt: null });
      
       if (oneProduct) {
         return res.send(oneProduct)
@@ -272,31 +273,34 @@ if(result.image){
     
 }
 
-export const allUsers= async(req, res)=>{
-  try{
+export const allUsers = async (req, res) => {
+  try {
+    const users = await User.find(
+      { role: "user" },
+      "firstName lastName email status phone"
+    );
 
-    const allUsers= await Users.find({role:"user"},{projection:{firstName:1, lastName:1, email:1, status:1, phone:1}});
-    const users = await allUsers.toArray()
-    if(users.length<0){
+    if (users.length === 0) {
       return res.status(404).send({
-        message:"users not Available",
-        status:0
-      })
+        message: "Users not available",
+        status: 0
+      });
     }
-    
+
     return res.status(200).send({
-      Data:users,
-      message:"users are Available",
-      status:1
-    })
-  }catch(error){
-        return res.status(500).send({
-      
-      message:error.message,
-      status:0
-    })
+      Data: users,
+      message: "Users are available",
+      status: 1
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: error.message,
+      status: 0
+    });
   }
-}
+};
+
 
 
 export const userStatus= async(req, res)=>{
@@ -304,7 +308,7 @@ export const userStatus= async(req, res)=>{
 try{
 
   const userId = new ObjectId(req.params.id);
-  const checkUser = await Users.findOne({ _id: userId});
+  const checkUser = await User.findOne({ _id: userId});
 
   if (!checkUser) {
       return res.status(404).send({
@@ -313,16 +317,16 @@ try{
         })
     } 
     if(checkUser.status == "active"){
-      await Users.updateOne({_id: userId}, {$set:{status:"block"}})
-        const getUser = await Users.findOne({ _id: userId});
+      await User.updateOne({_id: userId}, {$set:{status:"block"}})
+        const getUser = await User.findOne({ _id: userId});
       return res.status(200).send({
           status: 1,
           message: "User is block now",
           data: getUser
         })
     }    else if(checkUser.status == "block"){
-      await Users.updateOne({_id: userId}, {$set:{status:"active"}})
-          const getUser = await Users.findOne({ _id: userId});
+      await User.updateOne({_id: userId}, {$set:{status:"active"}})
+          const getUser = await User.findOne({ _id: userId});
       return res.status(200).send({
           status: 1,
           message: "User is active now",

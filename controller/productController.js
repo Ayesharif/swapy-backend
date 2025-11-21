@@ -2,7 +2,7 @@
 // import { client } from '../dbConfig.js';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
-import { Product } from '../model/product.js';
+import { Product } from '../model/Product.js';
 import { User } from '../model/User.js';
 // const myDB = client.db("olxClone");
 // const Products = myDB.collection("products");

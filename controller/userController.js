@@ -2,7 +2,7 @@
 import { ObjectId } from 'mongodb';
 import { deleteImage } from '../utils/deleteImage.js';
 import { User } from '../model/User.js';
-import { Product } from '../model/product.js';
+import { Product } from '../model/Product.js';
 import { Favourite } from '../model/Favourite.js';
 import { Chat } from '../model/Chat.js';
 
